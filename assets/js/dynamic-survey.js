@@ -1,38 +1,67 @@
 console.log('dynamic-survey-form');
 
-jQuery(document).ready(function($) {
-    $('#dynamic-survey-form').on('submit', function(e) {
+jQuery(document).ready(function ($) {
+    $('#dynamic-survey-form').on('submit', function (e) {
         e.preventDefault();
 
-        var survey_id = $(this).data('survey-id');
-        var option_id = $('input[name="survey_option"]:checked').val();
-        var nonce = $('input[name="nonce"]').val();
+        const surveyId = $(this).data('survey-id');
+        const selectedOption = $('input[name="survey_option"]:checked').val();
+        const nonce = $('input[name="nonce"]').val();
 
-        // Send the AJAX request
+        if (!selectedOption) {
+            alert('Please select an option to vote.');
+            return;
+        }
+
         $.ajax({
-            url: ajaxurl, // This will now use the localized `ajaxurl` value
-            method: 'POST',
+            url: ajaxurl, // Ensure `ajaxurl` is defined globally (for logged-in users)
+            type: 'POST',
+            dataType: 'json',
             data: {
                 action: 'submit_survey_vote',
-                survey_id: survey_id,
-                option_id: option_id,
+                survey_id: surveyId,
+                option_id: selectedOption,
                 nonce: nonce,
             },
-            success: function(response) {
+            success: function (response) {
                 if (response.success) {
-                    // Replace the survey with the results chart
-                    $('#survey-message').text(response.data.message).show();
-                    $('#survey-results').html(response.data.results_html).show();
+                    // Replace survey form with results chart
+                    $('#dynamic-survey-form').replaceWith(response.data.results_html);
 
-                    // Optional: Log chart data for debugging
-                    console.log(response.data.chart_data);
+                    // Render the chart
+                    const ctx = document.getElementById(`survey-chart-${surveyId}`).getContext('2d');
+                    new Chart(ctx, {
+                        type: 'bar', // Change to 'pie' for a Pie Chart
+                        data: {
+                            labels: response.data.chart_data.labels,
+                            datasets: [{
+                                label: 'Votes',
+                                data: response.data.chart_data.data,
+                                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                                borderColor: 'rgba(75, 192, 192, 1)',
+                                borderWidth: 1,
+                            }],
+                        },
+                        options: {
+                            responsive: true,
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                },
+                            },
+                        },
+                    });
+
+                    // Show success message
+                    $('#survey-message').text(response.data.message).fadeIn();
                 } else {
-                    $('#survey-message').text(response.data.message).show();
+                    alert(response.data || 'An error occurred.');
                 }
             },
-            error: function() {
-                $('#survey-message').text('There was an error processing your vote.').show();
-            }
+            error: function () {
+                alert('An unexpected error occurred. Please try again.');
+            },
         });
     });
 });
+
