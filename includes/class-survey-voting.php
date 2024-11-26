@@ -13,8 +13,12 @@ class SurveyVoting {
      * Handle survey vote submission by logged-in users.
      */
     public function handle_survey_vote() {
-        if ( ! isset( $_POST['survey_id'], $_POST['option_id'] ) || ! is_user_logged_in() ) {
+        if ( ! isset( $_POST['survey_id'], $_POST['option_id'], $_POST['nonce'] ) || ! is_user_logged_in() ) {
             wp_send_json_error( 'Invalid request or not logged in.' );
+        }
+
+        if ( ! wp_verify_nonce( $_POST['nonce'], 'submit_survey_vote' ) ) {
+            wp_send_json_error( 'Invalid nonce.' );
         }
 
         global $wpdb;
@@ -40,10 +44,31 @@ class SurveyVoting {
             'survey_id' => $survey_id,
             'option_id' => $option_id,
             'user_id'   => $user_id,
+            'vote_time' => current_time( 'mysql' )
         ]);
 
         if ( $inserted ) {
-            wp_send_json_success( 'Your vote has been recorded successfully!' );
+            // Fetch survey results for the response
+            $results = $wpdb->get_results( $wpdb->prepare(
+                "SELECT option_id, COUNT(*) AS votes FROM $votes_table WHERE survey_id = %d GROUP BY option_id",
+                $survey_id
+            ));
+
+            $labels = [];
+            $data   = [];
+            foreach ( $results as $result ) {
+                $labels[] = 'Option ' . $result->option_id;
+                $data[]   = (int) $result->votes;
+            }
+
+            wp_send_json_success( [
+                'message'     => 'Your vote has been recorded successfully!',
+                'results_html'=> $this->generate_results_html( $survey_id ),
+                'chart_data'  => [
+                    'labels' => $labels,
+                    'data'   => $data
+                ]
+            ]);
         } else {
             wp_send_json_error( 'Failed to record your vote. Please try again.' );
         }
@@ -54,6 +79,27 @@ class SurveyVoting {
      */
     public function restrict_non_logged_in() {
         wp_send_json_error( 'You must be logged in to vote.' );
+    }
+
+    /**
+     * Generate HTML for the results chart.
+     */
+    private function generate_results_html( $survey_id ) {
+        return '<canvas id="survey-chart-' . esc_attr( $survey_id ) . '"></canvas>';
+    }
+
+    /**
+     * Get all votes for admin tracking.
+     */
+    public static function get_all_votes() {
+        global $wpdb;
+        $votes_table = $wpdb->prefix . 'dynamic_survey_votes';
+
+        return $wpdb->get_results( "
+            SELECT survey_id, option_id, user_id, vote_time
+            FROM $votes_table
+            ORDER BY vote_time DESC
+        ", ARRAY_A );
     }
 }
 

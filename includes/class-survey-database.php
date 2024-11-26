@@ -7,68 +7,47 @@ class SurveyDatabase {
     public static function create_tables() {
         global $wpdb;
 
-        $table_name = $wpdb->prefix . 'dynamic_survey_votes';
+        $table_name = $wpdb->prefix . 'dynamic_surveys'; // Table for storing surveys
         $charset_collate = $wpdb->get_charset_collate();
 
-        // Debugging table creation
-        error_log("Creating database table for survey votes");
-
-        $sql = "CREATE TABLE $table_name (
-            id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
-            survey_id BIGINT(20) UNSIGNED NOT NULL,
-            option_id BIGINT(20) UNSIGNED NOT NULL,
-            user_id BIGINT(20) UNSIGNED NOT NULL,
-            vote_time DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
-            PRIMARY KEY  (id)
-        ) $charset_collate;";
+        $sql = "
+            CREATE TABLE $table_name (
+                id BIGINT(20) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                question VARCHAR(255) NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            ) $charset_collate;
+        ";
 
         require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
         dbDelta( $sql );
 
-        error_log("Survey database table created (or already exists).");
-    }
-    
-    public static function insert_vote($survey_id, $option_id, $user_id) {
-        global $wpdb;
-        
-        // Debugging data insert
-        error_log("Inserting vote into database for Survey ID: $survey_id, Option ID: $option_id, User ID: $user_id");
+        // Create table for survey options
+        $table_name_options = $wpdb->prefix . 'dynamic_survey_options'; // Table for storing options
+        $sql = "
+            CREATE TABLE $table_name_options (
+                id BIGINT(20) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                survey_id BIGINT(20) UNSIGNED NOT NULL,
+                option_text VARCHAR(255) NOT NULL,
+                votes INT DEFAULT 0,
+                FOREIGN KEY (survey_id) REFERENCES $table_name(id) ON DELETE CASCADE
+            ) $charset_collate;
+        ";
+        dbDelta( $sql );
 
-        $table = $wpdb->prefix . 'dynamic_survey_votes';
-        
-        $result = $wpdb->insert( $table, [
-            'survey_id' => $survey_id,
-            'option_id' => $option_id,
-            'user_id' => $user_id,
-            'vote_time' => current_time( 'mysql' )
-        ]);
-
-        if ($result === false) {
-            error_log("Error inserting vote: " . $wpdb->last_error);
-            return false;
-        }
-
-        error_log("Vote inserted successfully.");
-        return true;
-    }
-
-    public static function get_survey_results($survey_id) {
-        global $wpdb;
-
-        // Debugging survey result retrieval
-        error_log("Retrieving results for Survey ID: $survey_id");
-
-        $table = $wpdb->prefix . 'dynamic_survey_votes';
-        $results = $wpdb->get_results(
-            $wpdb->prepare("SELECT option_id, COUNT(*) as vote_count FROM $table WHERE survey_id = %d GROUP BY option_id", $survey_id)
-        );
-
-        if ($wpdb->last_error) {
-            error_log("Error retrieving survey results: " . $wpdb->last_error);
-            return [];
-        }
-
-        error_log("Survey results retrieved successfully.");
-        return $results;
+        // Create table for survey votes
+        $table_name_votes = $wpdb->prefix . 'dynamic_survey_votes'; // Table for storing votes
+        $sql = "
+            CREATE TABLE $table_name_votes (
+                id BIGINT(20) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                survey_id BIGINT(20) UNSIGNED NOT NULL,
+                option_id BIGINT(20) UNSIGNED NOT NULL,
+                user_ip VARCHAR(100),
+                vote_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (survey_id) REFERENCES $table_name(id) ON DELETE CASCADE,
+                FOREIGN KEY (option_id) REFERENCES $table_name_options(id) ON DELETE CASCADE
+            ) $charset_collate;
+        ";
+        dbDelta( $sql );
     }
 }
+

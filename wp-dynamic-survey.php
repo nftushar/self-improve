@@ -1,6 +1,6 @@
 <?php
 /**
- * Plugin Name: Dynamic Survey and Results Visualization
+ * Plugin Name: M Dynamic Survey and Results Visualization
  * Description: A plugin to create dynamic surveys and display results with charts.
  * Version: 1.0.1
  * Author: Your Name
