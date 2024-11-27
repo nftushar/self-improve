@@ -8,8 +8,9 @@ class SurveyAdmin {
         add_action( 'admin_post_create_survey', [ $this, 'handle_create_survey' ] );
         add_action( 'admin_post_delete_survey', [ $this, 'handle_delete_survey' ] );
     }
-
+  
     public function register_admin_pages() {
+        // Main menu: Dynamic Survey
         add_submenu_page(
             'tools.php',
             'Dynamic Survey',
@@ -18,14 +19,57 @@ class SurveyAdmin {
             'dynamic-survey',
             [ $this, 'render_admin_page' ]
         );
+  
+        // Submenu: Survey Tracking
+        add_submenu_page(
+            'tools.php',
+            'Survey Tracking',
+            'Survey Tracking',
+            'manage_options',
+            'survey-tracking',
+            [ $this, 'render_tracking_page' ]
+        );
     }
 
     public function render_admin_page() {
         global $wpdb;
+    
+        // Define the surveys table
         $surveys_table = $wpdb->prefix . 'dynamic_surveys';
-        $surveys = $wpdb->get_results( "SELECT * FROM $surveys_table" );
+    
+        // Check if the table exists
+        if ( $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $surveys_table ) ) === $surveys_table ) {
+            // Fetch surveys data
+            $surveys = $wpdb->get_results( "SELECT * FROM $surveys_table", ARRAY_A );
+    
+            // Include the admin survey page template
+            require_once DYNAMIC_SURVEY_PATH . 'templates/admin-survey-page.php';
+        } else {
+            // Display an error message if the table doesn't exist
+            echo '<div class="notice notice-error"><p>' . esc_html__( 'Dynamic Surveys table not found.', 'text-domain' ) . '</p></div>';
+        }
+    }
+    
+    public function render_tracking_page() {
+        global $wpdb;
 
-        require_once DYNAMIC_SURVEY_PATH . 'templates/admin-survey-page.php';
+        $votes_table = $wpdb->prefix . 'dynamic_survey_votes';
+        $surveys_table = $wpdb->prefix . 'dynamic_surveys';
+        $options_table = $wpdb->prefix . 'dynamic_survey_options';
+
+        $votes = $wpdb->get_results(
+            "SELECT 
+                v.survey_id, 
+                s.question, 
+                o.option_text, 
+                COUNT(v.option_id) AS vote_count
+             FROM $votes_table v
+             JOIN $surveys_table s ON v.survey_id = s.id
+             JOIN $options_table o ON v.option_id = o.id
+             GROUP BY v.survey_id, v.option_id"
+        );
+
+        require_once DYNAMIC_SURVEY_PATH . 'templates/admin-tracking-page.php';
     }
 
     public function handle_create_survey() {
@@ -69,3 +113,4 @@ class SurveyAdmin {
         exit;
     }
 }
+ 

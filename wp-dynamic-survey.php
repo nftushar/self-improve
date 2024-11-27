@@ -1,8 +1,8 @@
 <?php
 /**
- * Plugin Name: M Dynamic Survey and Results Visualization
+ * Plugin Name: Dynamic Survey
  * Description: A plugin to create dynamic surveys and display results with charts.
- * Version: 1.0.1
+ * Version: 1.0.2
  * Author: Your Name
  * Text Domain: dynamic-survey
  */
@@ -41,7 +41,7 @@ class DynamicSurvey {
         require_once DYNAMIC_SURVEY_PATH . 'includes/class-survey-admin.php';
         require_once DYNAMIC_SURVEY_PATH . 'includes/class-survey-frontend.php';
         require_once DYNAMIC_SURVEY_PATH . 'includes/class-survey-results.php';  
-        require_once DYNAMIC_SURVEY_PATH . 'includes/class-survey-voting.php';  
+        require_once DYNAMIC_SURVEY_PATH . 'includes/class-survey-tracking.php';  
     }
 
     private function initialize_classes() {

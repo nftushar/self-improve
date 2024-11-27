@@ -48,12 +48,14 @@
         <tbody>
             <?php if ( ! empty( $surveys ) ) : ?>
                 <?php foreach ( $surveys as $survey ) : ?>
+                    <?php error_log( print_r( $survey, true ) ); // Log the survey data ?>
                     <tr>
-                        <td><?php echo esc_html( $survey->id ); ?></td>
-                        <td><?php echo esc_html( $survey->question ); ?></td>
-                        <td><?php echo esc_html( ucfirst( $survey->status ) ); ?></td>
+                        <td><?php echo esc_html( $survey['id'] ); ?></td>
+                        <td><?php echo esc_html( $survey['question'] ); ?></td>
+                        <td><?php echo esc_html( ucfirst( $survey['status'] ) ); ?></td>
                         <td>
-                            <a href="<?php echo wp_nonce_url( admin_url( 'admin-post.php?action=delete_survey&survey_id=' . $survey->id ), 'delete_survey_nonce' ); ?>" class="button button-secondary">Delete</a>
+                            <!-- Delete button with nonce URL -->
+                            <a href="<?php echo wp_nonce_url( admin_url( 'admin-post.php?action=delete_survey&survey_id=' . $survey['id'] ), 'delete_survey_nonce' ); ?>" class="button button-secondary">Delete</a>
                         </td>
                     </tr>
                 <?php endforeach; ?>
@@ -62,7 +64,7 @@
                     <td colspan="4">No surveys found.</td>
                 </tr>
             <?php endif; ?>
-        </tbody>
+        </tbody> 
     </table>
 </div>
 
